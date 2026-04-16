@@ -23,11 +23,35 @@
 
 ## 快速开始
 
-### 本地运行
+### 一键启动（Windows / macOS / Linux）
 
 ```bash
 cd blog
-pip install flask
+# Windows
+install.bat
+
+# macOS / Linux
+chmod +x install.sh && ./install.sh
+```
+
+### 手动安装
+
+```bash
+cd blog
+
+# 创建虚拟环境
+python -m venv venv
+
+# 激活虚拟环境
+# Windows:
+.\venv\Scripts\Activate.pshell
+# macOS / Linux:
+source venv/bin/activate
+
+# 安装依赖
+pip install -r requirements.txt
+
+# 启动
 python app.py
 ```
 
@@ -58,6 +82,8 @@ python app.py
 blog/
 ├── app.py              # Flask 主程序
 ├── requirements.txt   # Python 依赖
+├── install.bat        # Windows 一键安装脚本
+├── install.sh         # Linux/macOS 一键安装脚本
 ├── blog.db            # SQLite 数据库（自动生成）
 ├── templates/          # HTML 模板
 │   ├── base.html      # 基础模板
@@ -128,7 +154,10 @@ cd blog
 #### 第三步：安装 Python 依赖
 
 ```bash
-pip3 install -r requirements.txt
+# 创建虚拟环境
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
 ```
 
 #### 第四步：配置 Systemd 服务
@@ -140,10 +169,10 @@ Description=Blog Flask Application
 After=network.target
 
 [Service]
-User=root
-Group=root
+User=www-data
+Group=www-data
 WorkingDirectory=/var/www/blog
-ExecStart=/usr/bin/python3 /var/www/blog/app.py
+ExecStart=/var/www/blog/venv/bin/python /var/www/blog/app.py
 Restart=always
 RestartSec=10
 
