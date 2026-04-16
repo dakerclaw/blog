@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>关于 - {{ settings.get('site_name', '认知觉醒') }}</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css">
+</head>
+<body>
+    <div id="app">
+        <header class="header">
+            <div class="container header-inner">
+                <a href="/" class="logo">
+                    <span class="logo-icon">{{ settings.get('site_logo', '☯') }}</span>
+                    <span class="logo-text">{{ settings.get('site_name', '认知觉醒') }}</span>
+                </a>
+                <nav class="nav">
+                    <a href="/" class="nav-link" data-page="home">首页</a>
+                    <a href="/#tags" class="nav-link" data-page="tags">标签</a>
+                    <a href="/about" class="nav-link active" data-page="about">关于</a>
+                </nav>
+                <button class="mobile-menu-btn" id="mobileMenuBtn" aria-label="菜单">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </button>
+            </div>
+        </header>
+
+        <div class="mobile-menu" id="mobileMenu">
+            <a href="/" class="mobile-nav-link" data-page="home">首页</a>
+            <a href="/#tags" class="mobile-nav-link" data-page="tags">标签</a>
+            <a href="/about" class="mobile-nav-link active" data-page="about">关于</a>
+        </div>
+
+        <main class="main">
+            <div class="container">
+                <div class="about-page">
+                    <div class="about-header">
+                        <div class="about-avatar">{{ settings.get('about_avatar', settings.get('site_logo', '☯')) }}</div>
+                        <h1 class="about-title">{{ settings.get('about_title', '关于「' + settings.get('site_name', '认知觉醒') + '」') }}</h1>
+                        <p class="about-subtitle">{{ settings.get('about_subtitle', '') }}</p>
+                    </div>
+                    
+                    <div class="about-content">
+                        <article class="post-content">
+                            {{ about_content|safe }}
+                        </article>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <footer class="footer">
+            <div class="container">
+                <div class="footer-content">
+                    <div class="footer-info">
+                        <p class="footer-slogan">{{ settings.get('footer_slogan', '') }}</p>
+                        <p class="footer-copyright">{{ settings.get('footer_copyright', '') }}</p>
+                    </div>
+                    <div class="footer-links">
+                        <a href="/" class="footer-link">返回首页</a>
+                        <span class="footer-divider">·</span>
+                        <a href="/about" class="footer-link">关于本站</a>
+                        <span class="footer-divider">·</span>
+                        <a href="/admin" class="footer-link">管理后台</a>
+                    </div>
+                </div>
+            </div>
+        </footer>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script>
+        // 移动端菜单
+        let mobileMenuOpen = false;
+        const menuBtn = document.getElementById('mobileMenuBtn');
+        const mobileMenu = document.getElementById('mobileMenu');
+
+        menuBtn.addEventListener('click', () => {
+            mobileMenuOpen = !mobileMenuOpen;
+            mobileMenu.classList.toggle('show', mobileMenuOpen);
+            menuBtn.classList.toggle('active', mobileMenuOpen);
+        });
+
+        document.querySelectorAll('.mobile-nav-link').forEach(link => {
+            link.addEventListener('click', () => {
+                mobileMenu.classList.remove('show');
+                menuBtn.classList.remove('active');
+                mobileMenuOpen = false;
+            });
+        });
+    </script>
+</body>
+</html>

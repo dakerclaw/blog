@@ -1,0 +1,367 @@
+{% extends "base.html" %}
+
+{% set site_name = settings.get('site_name', '认知觉醒') %}
+{% set site_title = settings.get('site_title', site_name) %}
+{% set site_logo = settings.get('site_logo', '☯') %}
+{% set hero_title = settings.get('hero_title', site_name) %}
+{% set site_subtitle = settings.get('site_subtitle', '') %}
+{% set footer_slogan = settings.get('footer_slogan', '') %}
+{% set footer_copyright = settings.get('footer_copyright', '') %}
+{% set meta_description = settings.get('site_description', '') %}
+{% set meta_keywords = settings.get('site_keywords', '') %}
+
+{% block title %}{{ site_name }} - 首页{% endblock %}
+
+{% block content %}
+<!-- 内容由 JavaScript 动态渲染 -->
+{% endblock %}
+
+{% block scripts %}
+<script>
+// ============================================
+// 博客主应用
+// ============================================
+
+const API_BASE = '/api';
+
+// 站点配置（由服务器端直接渲染）
+const INITIAL_SETTINGS = {
+    site_name: '{{ settings.get('site_name', '认知觉醒') }}',
+    site_logo: '{{ settings.get('site_logo', '☯') }}',
+    site_title: '{{ settings.get('site_title', '') }}',
+    site_subtitle: '{{ settings.get('site_subtitle', '') }}',
+    hero_title: '{{ settings.get('hero_title', settings.get('site_name', '认知觉醒')) }}'
+};
+
+// ============================================
+// 工具函数
+// ============================================
+
+function formatDate(dateStr) {
+    if (!dateStr) return '';
+    const date = new Date(dateStr);
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}年${month}月${day}日`;
+}
+
+function renderMarkdown(content) {
+    if (!content) return '';
+    marked.setOptions({
+        highlight: function(code, lang) {
+            if (lang && hljs.getLanguage(lang)) {
+                return hljs.highlight(code, { language: lang }).value;
+            }
+            return hljs.highlightAuto(code).value;
+        },
+        breaks: true,
+        gfm: true
+    });
+    return marked.parse(content);
+}
+
+async function fetchAPI(url, options = {}) {
+    const response = await fetch(url, options);
+    if (!response.ok) {
+        throw new Error(`API Error: ${response.status}`);
+    }
+    return response.json();
+}
+
+// ============================================
+// 页面渲染
+// ============================================
+
+function renderHomePage(posts, tags) {
+    const sortedPosts = [...posts].sort((a, b) => {
+        if (a.featured !== b.featured) return b.featured - a.featured;
+        return new Date(b.created_at) - new Date(a.created_at);
+    });
+
+    let postsHtml = sortedPosts.map(post => `
+        <article class="post-card ${post.featured ? 'featured' : ''}" onclick="navigateTo('/post/${post.slug}')">
+            <div class="post-meta">
+                <span class="post-date">
+                    <span>📅</span>
+                    ${formatDate(post.created_at)}
+                </span>
+                <span class="post-views">
+                    <span>👁</span>
+                    ${post.views} 阅读
+                </span>
+            </div>
+            <h2 class="post-title">${post.title}</h2>
+            <p class="post-excerpt">${post.excerpt || ''}</p>
+            <div class="post-tags">
+                ${(post.tags || []).map(tag => 
+                    `<span class="tag" onclick="event.stopPropagation(); navigateTo('/tag/${encodeURIComponent(tag)}')">${tag}</span>`
+                ).join('')}
+            </div>
+        </article>
+    `).join('');
+
+    return `
+        <div class="container">
+            <section class="hero">
+                <h1 class="hero-title">${INITIAL_SETTINGS.hero_title}</h1>
+                <p class="hero-subtitle">${INITIAL_SETTINGS.site_subtitle}</p>
+            </section>
+            <div class="post-list">
+                ${postsHtml}
+            </div>
+        </div>
+    `;
+}
+
+function renderTagsPage(tags) {
+    let tagsHtml = tags.map(tag => `
+        <div class="tag-card" onclick="navigateTo('/tag/${encodeURIComponent(tag.name)}')">
+            <span class="tag-card-name">${tag.name}</span>
+            <span class="tag-card-count">${tag.count} 篇</span>
+        </div>
+    `).join('');
+
+    return `
+        <div class="container">
+            <div class="tags-page">
+                <h1 class="page-title">📚 标签分类</h1>
+                <div class="tags-grid">
+                    ${tagsHtml}
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+function renderTagPostsPage(tagName, posts) {
+    const sortedPosts = [...posts].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+
+    let postsHtml = sortedPosts.map(post => `
+        <article class="post-card ${post.featured ? 'featured' : ''}" onclick="navigateTo('/post/${post.slug}')">
+            <div class="post-meta">
+                <span class="post-date">
+                    <span>📅</span>
+                    ${formatDate(post.created_at)}
+                </span>
+                <span class="post-views">
+                    <span>👁</span>
+                    ${post.views} 阅读
+                </span>
+            </div>
+            <h2 class="post-title">${post.title}</h2>
+            <p class="post-excerpt">${post.excerpt || ''}</p>
+            <div class="post-tags">
+                ${(post.tags || []).map(tag => 
+                    `<span class="tag" onclick="event.stopPropagation(); navigateTo('/tag/${encodeURIComponent(tag)}')">${tag}</span>`
+                ).join('')}
+            </div>
+        </article>
+    `).join('');
+
+    return `
+        <div class="container">
+            <div class="tags-page">
+                <div class="tag-posts-header">
+                    <h2>标签</h2>
+                    <span class="tag-badge">${tagName}</span>
+                    <span style="color: var(--text-muted);">共 ${sortedPosts.length} 篇文章</span>
+                </div>
+                <a href="/" class="back-link">
+                    <span>←</span>
+                    返回首页
+                </a>
+                <div class="post-list">
+                    ${postsHtml || '<div class="empty-state"><div class="empty-state-icon">📭</div><p class="empty-state-text">暂无相关文章</p></div>'}
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+function renderPostPage(post) {
+    const contentHtml = renderMarkdown(post.content);
+
+    return `
+        <div class="container">
+            <div class="post-detail">
+                <a href="/" class="back-link">
+                    <span>←</span>
+                    返回首页
+                </a>
+                <header class="post-header">
+                    <h1 class="post-detail-title">${post.title}</h1>
+                    <div class="post-detail-meta">
+                        <span><span>👤</span>${post.author || '觉醒者'}</span>
+                        <span><span>📅</span>${formatDate(post.created_at)}</span>
+                        <span><span>👁</span>${post.views} 阅读</span>
+                    </div>
+                    <div class="post-detail-tags">
+                        ${(post.tags || []).map(tag => 
+                            `<span class="tag" onclick="navigateTo('/tag/${encodeURIComponent(tag)}')">${tag}</span>`
+                        ).join('')}
+                    </div>
+                </header>
+                <article class="post-content">
+                    ${contentHtml}
+                </article>
+            </div>
+        </div>
+    `;
+}
+
+function renderAboutPage(aboutData) {
+    const content = aboutData ? aboutData.content : '';
+    
+    return `
+        <div class="container">
+            <div class="about-page">
+                <div class="about-header">
+                    <div class="about-avatar">${INITIAL_SETTINGS.site_logo}</div>
+                    <h1 class="about-title">关于「${INITIAL_SETTINGS.site_name}」</h1>
+                    <p class="about-subtitle">探索思维边界，觉醒生命潜能</p>
+                </div>
+                <div class="about-content">
+                    <article class="post-content">
+                        ${renderMarkdown(content)}
+                    </article>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+function render404Page(message = '页面不存在') {
+    return `
+        <div class="container">
+            <div class="empty-state">
+                <div class="empty-state-icon">🔍</div>
+                <p class="empty-state-text">${message}</p>
+                <p class="empty-state-hint"><a href="/">返回首页</a></p>
+            </div>
+        </div>
+    `;
+}
+
+function renderLoading() {
+    return `
+        <div class="container">
+            <div class="loading"></div>
+        </div>
+    `;
+}
+
+// ============================================
+// 路由处理
+// ============================================
+
+let posts = [];
+let tags = [];
+
+async function router() {
+    const mainContent = document.getElementById('mainContent');
+    const hash = window.location.hash.slice(1) || '/';
+    const parts = hash.split('/').filter(Boolean);
+
+    mainContent.innerHTML = renderLoading();
+
+    try {
+        // 加载数据（标签和标签详情页面需要强制刷新 posts）
+        if (posts.length === 0 || parts[0] === 'tag') {
+            posts = await fetchAPI(`${API_BASE}/posts`);
+        }
+        if (tags.length === 0) {
+            tags = await fetchAPI(`${API_BASE}/tags`);
+        }
+
+        let html = '';
+
+        if (hash === '/' || hash === '') {
+            html = renderHomePage(posts, tags);
+        } else if (hash === 'tags' || hash === '/tags') {
+            html = renderTagsPage(tags);
+        } else if (hash === 'about' || hash === '/about') {
+            try {
+                const aboutData = await fetchAPI(`${API_BASE}/about`);
+                html = renderAboutPage(aboutData);
+            } catch (e) {
+                html = renderAboutPage(null);
+            }
+        } else if (parts[0] === 'post' && parts[1]) {
+            try {
+                const post = await fetchAPI(`${API_BASE}/posts/${parts[1]}`);
+                html = renderPostPage(post);
+            } catch (e) {
+                html = render404Page('文章不存在');
+            }
+        } else if (parts[0] === 'tag' && parts[1]) {
+            const tagName = decodeURIComponent(parts[1]);
+            // 重新从当前 posts 过滤（因为 posts 可能刚被刷新）
+            const tagPosts = posts.filter(p => (p.tags || []).includes(tagName));
+            html = renderTagPostsPage(tagName, tagPosts);
+        } else {
+            html = render404Page();
+        }
+
+        mainContent.innerHTML = html;
+
+    } catch (error) {
+        console.error('加载失败:', error);
+        mainContent.innerHTML = render404Page('加载失败，请刷新重试');
+    }
+}
+
+function navigateTo(path) {
+    window.location.hash = path;
+}
+
+// ============================================
+// 移动端菜单
+// ============================================
+
+let mobileMenuOpen = false;
+
+function toggleMobileMenu() {
+    mobileMenuOpen = !mobileMenuOpen;
+    const mobileMenu = document.getElementById('mobileMenu');
+    const menuBtn = document.getElementById('mobileMenuBtn');
+
+    if (mobileMenuOpen) {
+        mobileMenu.classList.add('show');
+        menuBtn.classList.add('active');
+    } else {
+        mobileMenu.classList.remove('show');
+        menuBtn.classList.remove('active');
+    }
+}
+
+function closeMobileMenu() {
+    mobileMenuOpen = false;
+    document.getElementById('mobileMenu').classList.remove('show');
+    document.getElementById('mobileMenuBtn').classList.remove('active');
+}
+
+// ============================================
+// 初始化
+// ============================================
+
+document.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('mobileMenuBtn').addEventListener('click', toggleMobileMenu);
+
+    document.querySelectorAll('.mobile-nav-link').forEach(link => {
+        link.addEventListener('click', closeMobileMenu);
+    });
+
+    document.addEventListener('click', (e) => {
+        if (mobileMenuOpen &&
+            !e.target.closest('.mobile-menu') &&
+            !e.target.closest('.mobile-menu-btn')) {
+            closeMobileMenu();
+        }
+    });
+
+    window.addEventListener('hashchange', router);
+    router();
+});
+</script>
+{% endblock %}
