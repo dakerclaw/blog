@@ -1,0 +1,15 @@
+[Unit]
+Description=博客系统
+After=network.target
+
+[Service]
+WorkingDirectory=/var/www/blog
+ExecStart=/var/www/blog/venv/bin/python /var/www/blog/app.py
+Restart=always
+RestartSec=5
+# 生产环境建议创建专用用户，注释掉下面两行使用 root 运行
+# User=www-data
+# Group=www-data
+
+[Install]
+WantedBy=multi-user.target
