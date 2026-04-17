@@ -12,7 +12,7 @@ import hashlib
 import markdown
 
 # 版本号 - 更新此值可强制刷新浏览器缓存
-VERSION = '1.0.1'
+VERSION = '1.0.2'
 
 app = Flask(__name__)
 app.secret_key = 'blog-secret-key-2026'
