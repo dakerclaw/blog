@@ -51,10 +51,10 @@ echo -e "${YELLOW}[1/5]${NC} 安装系统依赖..."
 
 if [ "$OS" = "debian" ]; then
     apt update
-    apt install -y python3 python3-venv python3-pip git
+    apt install -y python3 python3-venv python3-pip git rsync
 elif [ "$OS" = "centos" ]; then
     yum update -y
-    yum install -y python3 python3-pip git
+    yum install -y python3 python3-pip git rsync
 fi
 echo -e "  ${GREEN}✓${NC} 系统依赖安装完成"
 

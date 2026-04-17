@@ -670,6 +670,78 @@ def admin_logout_api():
     session.pop('admin', None)
     return jsonify({'success': True})
 
+@app.route('/api/admin/password', methods=['PUT'])
+@login_required
+def update_password():
+    """修改密码"""
+    data = request.get_json()
+    old_password = data.get('oldPassword')
+    new_password = data.get('newPassword')
+    
+    if not old_password or not new_password:
+        return jsonify({'success': False, 'message': '请填写完整信息'}), 400
+    
+    if len(new_password) < 6:
+        return jsonify({'success': False, 'message': '新密码长度不能少于6位'}), 400
+    
+    conn = get_db()
+    cursor = conn.cursor()
+    
+    # 验证旧密码
+    old_hash = hashlib.sha256(old_password.encode()).hexdigest()
+    cursor.execute('SELECT * FROM admin WHERE password = ?', (old_hash,))
+    if not cursor.fetchone():
+        conn.close()
+        return jsonify({'success': False, 'message': '原密码错误'}), 401
+    
+    # 更新密码
+    new_hash = hashlib.sha256(new_password.encode()).hexdigest()
+    cursor.execute('UPDATE admin SET password = ?', (new_hash,))
+    conn.commit()
+    conn.close()
+    
+    return jsonify({'success': True, 'message': '密码修改成功'})
+
+@app.route('/api/admin/username', methods=['PUT'])
+@login_required
+def update_username():
+    """修改用户名"""
+    data = request.get_json()
+    new_username = data.get('username')
+    password = data.get('password')
+    
+    if not new_username or not password:
+        return jsonify({'success': False, 'message': '请填写完整信息'}), 400
+    
+    if len(new_username) < 3:
+        return jsonify({'success': False, 'message': '用户名长度不能少于3位'}), 400
+    
+    conn = get_db()
+    cursor = conn.cursor()
+    
+    # 验证密码
+    password_hash = hashlib.sha256(password.encode()).hexdigest()
+    cursor.execute('SELECT * FROM admin WHERE password = ?', (password_hash,))
+    if not cursor.fetchone():
+        conn.close()
+        return jsonify({'success': False, 'message': '密码错误'}), 401
+    
+    # 检查新用户名是否已存在
+    cursor.execute('SELECT * FROM admin WHERE username = ?', (new_username,))
+    if cursor.fetchone():
+        conn.close()
+        return jsonify({'success': False, 'message': '用户名已存在'}), 400
+    
+    # 更新用户名
+    cursor.execute('UPDATE admin SET username = ?', (new_username,))
+    conn.commit()
+    conn.close()
+    
+    # 更新 session
+    session['admin'] = new_username
+    
+    return jsonify({'success': True, 'message': '用户名修改成功'})
+
 @app.route('/api/admin/posts', methods=['POST'])
 @login_required
 def create_post():
