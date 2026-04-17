@@ -1,5 +1,5 @@
 """
-认知觉醒博客 - Flask 后端
+博客系统 - Flask 后端
 使用 SQLite 数据库，支持文章管理
 """
 
@@ -11,8 +11,11 @@ import os
 import hashlib
 import markdown
 
+# 版本号 - 更新此值可强制刷新浏览器缓存
+VERSION = '1.0.1'
+
 app = Flask(__name__)
-app.secret_key = 'cognitive-awakening-secret-key-2026'
+app.secret_key = 'blog-secret-key-2026'
 app.config['DATABASE'] = 'blog.db'
 app.config['UPLOAD_FOLDER'] = 'uploads'
 
@@ -856,7 +859,7 @@ def get_all_posts():
 def index():
     """首页"""
     settings = get_settings()
-    return render_template('index.html', settings=settings)
+    return render_template('index.html', settings=settings, version=VERSION)
 
 @app.route('/admin')
 def admin():
@@ -864,7 +867,7 @@ def admin():
     if 'admin' not in session:
         return redirect(url_for('admin_login'))
     settings = get_settings()
-    return render_template('admin.html', settings=settings)
+    return render_template('admin.html', settings=settings, version=VERSION)
 
 @app.route('/admin/login')
 def admin_login():
@@ -872,7 +875,7 @@ def admin_login():
     if 'admin' in session:
         return redirect(url_for('admin'))
     settings = get_settings()
-    return render_template('login.html', settings=settings)
+    return render_template('login.html', settings=settings, version=VERSION)
 
 @app.route('/tags')
 def tags_page():
@@ -893,7 +896,7 @@ def about():
     # 将 Markdown 转换为 HTML
     about_html = markdown.markdown(content, extensions=['fenced_code', 'tables'])
     
-    return render_template('about.html', settings=settings, about_content=about_html)
+    return render_template('about.html', settings=settings, about_content=about_html, version=VERSION)
 
 # ============================================
 # 静态文件
@@ -901,11 +904,15 @@ def about():
 
 @app.route('/css/<path:filename>')
 def serve_css(filename):
-    return send_from_directory('templates/css', filename)
+    response = send_from_directory('templates/css', filename)
+    response.headers['Cache-Control'] = 'public, max-age=31536000'
+    return response
 
 @app.route('/js/<path:filename>')
 def serve_js(filename):
-    return send_from_directory('templates/js', filename)
+    response = send_from_directory('templates/js', filename)
+    response.headers['Cache-Control'] = 'public, max-age=31536000'
+    return response
 
 # ============================================
 # 初始化
