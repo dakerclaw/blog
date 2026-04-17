@@ -474,6 +474,7 @@
         </a>
         <div class="admin-actions">
             <a href="/" class="admin-btn admin-btn-outline" target="_blank">查看博客</a>
+            <button class="admin-btn admin-btn-outline" onclick="openPasswordModal()">修改密码</button>
             <button class="admin-btn admin-btn-outline" onclick="openSettingsModal()">站点设置</button>
             <button class="admin-btn admin-btn-outline" onclick="openAboutModal()">编辑关于</button>
             <button class="admin-btn admin-btn-primary" onclick="openPostModal()">写文章</button>
@@ -1023,6 +1024,89 @@
 
         // Load posts on page load
         loadPosts();
+
+        // Password Modal Functions
+        function openPasswordModal() {
+            document.getElementById('passwordModal').style.display = 'flex';
+            document.getElementById('oldPassword').value = '';
+            document.getElementById('newPassword').value = '';
+            document.getElementById('confirmPassword').value = '';
+        }
+
+        function closePasswordModal() {
+            document.getElementById('passwordModal').style.display = 'none';
+        }
+
+        async function savePassword() {
+            const oldPassword = document.getElementById('oldPassword').value;
+            const newPassword = document.getElementById('newPassword').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+
+            if (!oldPassword || !newPassword || !confirmPassword) {
+                showToast('请填写所有字段', 'error');
+                return;
+            }
+
+            if (newPassword !== confirmPassword) {
+                showToast('两次输入的新密码不一致', 'error');
+                return;
+            }
+
+            if (newPassword.length < 6) {
+                showToast('新密码长度不能少于6位', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/password`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ oldPassword, newPassword })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    showToast('密码修改成功');
+                    closePasswordModal();
+                } else {
+                    showToast(data.message || '修改失败', 'error');
+                }
+            } catch (error) {
+                showToast('网络错误', 'error');
+            }
+        }
     </script>
+
+    <!-- Password Modal -->
+    <div class="modal-overlay" id="passwordModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h2 class="modal-title">修改密码</h2>
+                <button class="modal-close" onclick="closePasswordModal()">×</button>
+            </div>
+            <div class="modal-body">
+                <form id="passwordForm" onsubmit="event.preventDefault(); savePassword();">
+                    <div class="form-group">
+                        <label class="form-label">原密码</label>
+                        <input type="password" id="oldPassword" class="form-input" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">新密码</label>
+                        <input type="password" id="newPassword" class="form-input" required>
+                        <div class="form-hint">至少6位字符</div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">确认新密码</label>
+                        <input type="password" id="confirmPassword" class="form-input" required>
+                    </div>
+                    <div class="form-actions">
+                        <button type="button" class="admin-btn admin-btn-outline" onclick="closePasswordModal()">取消</button>
+                        <button type="submit" class="admin-btn admin-btn-primary">保存</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
 </body>
 </html>
