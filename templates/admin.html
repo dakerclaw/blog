@@ -615,8 +615,11 @@
                             <button type="button" class="tb-btn" onclick="tbWrap('`','`')">代码</button>
                             <div class="tb-sep"></div>
                             <button type="button" class="tb-btn" onclick="tbInsertLink()" title="插入链接">🔗 链接</button>
-                            <button type="button" class="tb-btn" onclick="triggerImageUpload()" title="点击上传图片">🖼 插入图片</button>
+                            <button type="button" class="tb-btn" onclick="triggerImageUpload()" title="点击上传图片">🖼 图片</button>
                             <input type="file" id="imageFileInput" accept="image/*" style="display:none" onchange="handleImageFileSelect(this)">
+                            <div class="tb-sep"></div>
+                            <button type="button" class="tb-btn" onclick="triggerWordImport()" title="从Word文档导入" style="color: var(--primary-color); border-color: var(--primary-color);">📄 导入Word</button>
+                            <input type="file" id="wordFileInput" accept=".docx" style="display:none" onchange="handleWordFileSelect(this)">
                         </div>
                         <div class="editor-wrap" id="editorWrap">
                             <textarea id="postContent" class="form-textarea" 
@@ -1273,6 +1276,58 @@
                 }
             }
         });
+
+        // Word文档导入
+        function triggerWordImport() {
+            document.getElementById('wordFileInput').click();
+        }
+
+        function handleWordFileSelect(input) {
+            if (input.files && input.files[0]) {
+                importWordFile(input.files[0]);
+                input.value = '';
+            }
+        }
+
+        async function importWordFile(file) {
+            if (!file.name.endsWith('.docx')) {
+                showToast('只支持 .docx 格式', 'error');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            try {
+                const response = await fetch('/api/admin/import-word', {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await response.json();
+
+                if (data.success) {
+                    // 确认是否替换现有内容
+                    const existingContent = document.getElementById('postContent').value.trim();
+                    if (existingContent) {
+                        if (!confirm('导入将替换现有内容，确定继续吗？')) {
+                            return;
+                        }
+                    }
+
+                    // 填充标题和内容
+                    if (!document.getElementById('postTitle').value.trim()) {
+                        document.getElementById('postTitle').value = data.title || '';
+                    }
+                    document.getElementById('postContent').value = data.content || '';
+                    updatePreview();
+                    showToast('Word文档导入成功');
+                } else {
+                    showToast(data.message || '导入失败', 'error');
+                }
+            } catch (err) {
+                showToast('导入出错', 'error');
+            }
+        }
 
         // Password Modal Functions
         function openPasswordModal() {
