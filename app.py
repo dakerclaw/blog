@@ -10,9 +10,10 @@ from datetime import datetime
 import os
 import hashlib
 import markdown
+import uuid
 
 # 版本号 - 更新此值可强制刷新浏览器缓存
-VERSION = '1.0.2'
+VERSION = '1.0.3'
 
 app = Flask(__name__)
 app.secret_key = 'blog-secret-key-2026'
@@ -744,6 +745,38 @@ def update_username():
     session['admin'] = new_username
     
     return jsonify({'success': True, 'message': '用户名修改成功'})
+
+@app.route('/api/admin/upload', methods=['POST'])
+@login_required
+def upload_image():
+    """上传图片"""
+    if 'file' not in request.files:
+        return jsonify({'success': False, 'message': '未选择文件'}), 400
+
+    file = request.files['file']
+    if file.filename == '':
+        return jsonify({'success': False, 'message': '未选择文件'}), 400
+
+    # 检查文件类型
+    allowed = {'png', 'jpg', 'jpeg', 'gif', 'webp', 'svg'}
+    ext = file.filename.rsplit('.', 1)[-1].lower() if '.' in file.filename else ''
+    if ext not in allowed:
+        return jsonify({'success': False, 'message': '不支持的图片格式'}), 400
+
+    # 生成唯一文件名
+    filename = f"{uuid.uuid4().hex}.{ext}"
+    save_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+    file.save(save_path)
+
+    url = f"/uploads/{filename}"
+    return jsonify({'success': True, 'url': url})
+
+
+@app.route('/uploads/<path:filename>')
+def serve_uploads(filename):
+    """提供上传文件访问"""
+    return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
+
 
 @app.route('/api/admin/posts', methods=['POST'])
 @login_required
