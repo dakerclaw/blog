@@ -3,7 +3,14 @@
 # =============================================
 #   博客系统 - Linux 服务器一键安装脚本
 #   适用于 Debian/Ubuntu 服务器
-#   运行方式: bash install_server.sh
+#
+#   使用方式:
+#   方式1 (推荐): git clone 后运行
+#     git clone https://github.com/dakerclaw/blog.git
+#     cd blog && bash install_server.sh
+#
+#   方式2: 直接从 URL 运行
+#     bash <(curl -fsSL https://raw.githubusercontent.com/dakerclaw/blog/main/install_server.sh)
 # =============================================
 
 set -e
@@ -14,9 +21,10 @@ GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
-# 安装目录（可修改）
+# 安装配置
 INSTALL_DIR="/var/www/blog"
 SERVICE_NAME="blog"
+REPO_URL="https://github.com/dakerclaw/blog.git"
 
 echo -e "${GREEN}============================================${NC}"
 echo -e "${GREEN}  博客系统 - 服务器一键安装脚本${NC}"
@@ -29,9 +37,6 @@ if [ "$EUID" -ne 0 ]; then
     echo "请先执行: su - root"
     exit 1
 fi
-
-# 获取脚本所在目录
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # 检测操作系统
 echo -e "${YELLOW}[检测]${NC} 检测操作系统..."
@@ -54,10 +59,10 @@ echo -e "${YELLOW}[1/5]${NC} 安装系统依赖..."
 
 if [ "$OS" = "debian" ]; then
     apt update
-    apt install -y python3 python3-venv python3-pip git rsync
+    apt install -y python3 python3-venv python3-pip git rsync curl
 elif [ "$OS" = "centos" ]; then
     yum update -y
-    yum install -y python3 python3-pip git rsync
+    yum install -y python3 python3-pip git rsync curl
 fi
 echo -e "  ${GREEN}✓${NC} 系统依赖安装完成"
 
@@ -67,38 +72,51 @@ echo -e "  ${GREEN}✓${NC} 系统依赖安装完成"
 echo ""
 echo -e "${YELLOW}[2/5]${NC} 准备项目文件..."
 
-# 确定工作目录
-if [ "$SCRIPT_DIR" = "$INSTALL_DIR" ]; then
-    # 脚本在目标目录运行，使用当前目录
-    WORK_DIR="$SCRIPT_DIR"
-    echo "  使用当前目录文件: $WORK_DIR"
-else
-    # 脚本在其他位置，创建目标目录并复制文件
-    WORK_DIR="$INSTALL_DIR"
-    mkdir -p "$WORK_DIR"
+# 检查脚本所在目录是否有完整项目文件
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+WORK_DIR="$INSTALL_DIR"
 
-    # 检查源文件是否完整
-    if [ ! -f "$SCRIPT_DIR/app.py" ]; then
-        echo -e "${RED}错误：源目录缺少 app.py，请检查仓库是否克隆完整${NC}"
-        echo "  提示: 删除 $INSTALL_DIR 后重新克隆仓库"
-        exit 1
+# 检查当前目录是否有 app.py（表示在克隆的仓库中运行）
+if [ -f "$SCRIPT_DIR/app.py" ]; then
+    # 在克隆的仓库中运行
+    WORK_DIR="$SCRIPT_DIR"
+    echo "  检测到项目文件，使用当前目录: $WORK_DIR"
+else
+    # 需要克隆仓库
+    echo "  未检测到项目文件，将从 GitHub 克隆..."
+
+    # 检查 /var/www 是否存在
+    if [ ! -d "/var/www" ]; then
+        mkdir -p /var/www
     fi
 
-    echo "  复制文件从 $SCRIPT_DIR 到 $INSTALL_DIR"
-    rsync -av --exclude='venv' --exclude='*.db' --exclude='__pycache__' \
-        --exclude='*.pyc' --exclude='.git' \
-        "$SCRIPT_DIR/" "$INSTALL_DIR/"
+    # 如果目标目录已存在，询问是否覆盖
+    if [ -d "$INSTALL_DIR" ]; then
+        echo -e "  ${YELLOW}警告：$INSTALL_DIR 已存在${NC}"
+        read -p "  是否删除并重新克隆? (y/N): " confirm
+        if [ "$confirm" = "y" ] || [ "$confirm" = "Y" ]; then
+            rm -rf "$INSTALL_DIR"
+        else
+            echo "  安装取消"
+            exit 0
+        fi
+    fi
+
+    # 克隆仓库
+    echo "  正在克隆仓库..."
+    git clone "$REPO_URL" "$INSTALL_DIR"
+    WORK_DIR="$INSTALL_DIR"
+    echo -e "  ${GREEN}✓${NC} 仓库克隆完成"
 fi
 
 # 检查文件完整性
-echo "  检查必需文件..."
+echo "  检查文件完整性..."
 for file in app.py requirements.txt templates/index.html; do
     if [ ! -f "$WORK_DIR/$file" ]; then
-        echo -e "${RED}错误：缺少必需文件 $file${NC}"
-        echo "  请确保仓库克隆完整，或重新克隆："
+        echo -e "${RED}错误：缺少文件 $file${NC}"
+        echo "  请重新克隆仓库："
         echo "    rm -rf $INSTALL_DIR"
-        echo "    cd /var/www"
-        echo "    git clone https://github.com/dakerclaw/blog.git"
+        echo "    git clone $REPO_URL"
         exit 1
     fi
 done
