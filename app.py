@@ -11,9 +11,16 @@ import os
 import hashlib
 import markdown
 import uuid
+from io import BytesIO
+
+# 新增：Word文档处理
+from docx import Document
+from docx.shared import Inches, Pt, Cm
+from docx.enum.text import WD_PARAGRAPH_ALIGNMENT
+import re
 
 # 版本号 - 更新此值可强制刷新浏览器缓存
-VERSION = '1.0.3'
+VERSION = '1.0.4'
 
 app = Flask(__name__)
 app.secret_key = 'blog-secret-key-2026'
@@ -776,6 +783,181 @@ def upload_image():
 def serve_uploads(filename):
     """提供上传文件访问"""
     return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
+
+
+@app.route('/api/admin/import-word', methods=['POST'])
+@login_required
+def import_word():
+    """从Word文档导入文章内容"""
+    if 'file' not in request.files:
+        return jsonify({'success': False, 'message': '未选择文件'}), 400
+
+    file = request.files['file']
+    if file.filename == '':
+        return jsonify({'success': False, 'message': '未选择文件'}), 400
+
+    # 检查文件类型
+    ext = file.filename.rsplit('.', 1)[-1].lower() if '.' in file.filename else ''
+    if ext not in {'docx'}:
+        return jsonify({'success': False, 'message': '只支持 .docx 格式'}), 400
+
+    try:
+        # 读取文件内容
+        file_content = BytesIO(file.read())
+        doc = Document(file_content)
+
+        markdown_content = []
+        title = ''
+
+        # 处理段落
+        for para in doc.paragraphs:
+            text = para.text.strip()
+            if not text:
+                markdown_content.append('')
+                continue
+
+            # 检测标题样式
+            style_name = para.style.name if para.style else ''
+
+            # 检测是否为列表项
+            if 'List' in style_name or 'Numbering' in style_name:
+                # 无序列表
+                markdown_content.append(f'- {text}')
+                continue
+
+            # 检测有序列表
+            if para._element.find('.//{http://schemas.openxmlformats.org/wordprocessingml/2006/main}numPr') is not None:
+                markdown_content.append(f'- {text}')
+                continue
+
+            # 检测标题样式
+            if 'Heading' in style_name:
+                level = 1
+                if 'Heading 1' in style_name:
+                    level = 1
+                    if not title:
+                        title = text
+                elif 'Heading 2' in style_name:
+                    level = 2
+                elif 'Heading 3' in style_name:
+                    level = 3
+                elif 'Heading 4' in style_name:
+                    level = 4
+                elif 'Heading 5' in style_name:
+                    level = 5
+                elif 'Heading 6' in style_name:
+                    level = 6
+                markdown_content.append(f"{'#' * level} {text}")
+                continue
+
+            # 检测引用
+            if 'Quote' in style_name or 'Block Text' in style_name:
+                markdown_content.append(f'> {text}')
+                continue
+
+            # 处理普通段落（保留样式）
+            inline_md = convert_runs_to_markdown(para)
+            if inline_md:
+                markdown_content.append(inline_md)
+
+        # 处理表格
+        for table in doc.tables:
+            md_table = convert_table_to_markdown(table)
+            if md_table:
+                markdown_content.append(md_table)
+
+        # 处理图片
+        image_map = {}
+        for rel in doc.part.rels.values():
+            if "image" in rel.target_ref:
+                try:
+                    image_data = rel.target_part.blob
+                    img_ext = rel.target_ref.rsplit('.', 1)[-1].lower() if '.' in rel.target_ref else 'png'
+                    if img_ext not in {'png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp'}:
+                        img_ext = 'png'
+                    filename = f"{uuid.uuid4().hex}.{img_ext}"
+                    image_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+                    with open(image_path, 'wb') as f:
+                        f.write(image_data)
+                    image_map[rel.target_ref] = f"/uploads/{filename}"
+                except Exception:
+                    pass
+
+        # 替换图片引用
+        final_content = '\n\n'.join(markdown_content)
+        for old_ref, new_url in image_map.items():
+            final_content = final_content.replace(old_ref, new_url)
+
+        # 如果没有找到标题，使用第一行作为标题
+        if not title:
+            lines = [l for l in final_content.split('\n') if l.strip() and not l.startswith('#')]
+            if lines:
+                title = lines[0].strip()
+                if len(title) > 100:
+                    title = title[:100]
+
+        return jsonify({
+            'success': True,
+            'title': title,
+            'content': final_content
+        })
+
+    except Exception as e:
+        return jsonify({'success': False, 'message': f'导入失败: {str(e)}'}), 500
+
+
+def convert_runs_to_markdown(para):
+    """将段落中的Run转换为Markdown"""
+    parts = []
+
+    for run in para.runs:
+        text = run.text
+        if not text:
+            continue
+
+        # 检查样式
+        bold = run.bold
+        italic = run.italic
+        underline = run.underline
+        strike = run.strike
+
+        # 处理删除线
+        if strike:
+            text = f'~~{text}~~'
+
+        # 处理下划线（转为HTML下划线）
+        if underline:
+            text = f'<u>{text}</u>'
+
+        # 处理粗体
+        if bold:
+            text = f'**{text}**'
+
+        # 处理斜体
+        if italic:
+            text = f'*{text}*'
+
+        parts.append(text)
+
+    if parts:
+        return ''.join(parts)
+    return ''
+
+
+def convert_table_to_markdown(table):
+    """将Word表格转换为Markdown表格"""
+    rows = []
+    for i, row in enumerate(table.rows):
+        cells = [cell.text.strip().replace('\n', ' ').replace('|', '\\|') for cell in row.cells]
+        row_str = '| ' + ' | '.join(cells) + ' |'
+        rows.append(row_str)
+
+        # 第一行作为表头，加分隔符
+        if i == 0:
+            separator = '| ' + ' | '.join(['---'] * len(cells)) + ' |'
+            rows.append(separator)
+
+    return '\n'.join(rows) if rows else ''
 
 
 @app.route('/api/admin/posts', methods=['POST'])
