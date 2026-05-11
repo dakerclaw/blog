@@ -131,6 +131,17 @@ blog/
 
 ---
 
+## 上传问题处理
+如果导入word大于1Mb，需要调整nginx的配置。
+
+```
+echo "client_max_body_size 100M;" >> /etc/nginx/conf.d/blog.conf
+nginx -t
+systemctl reload nginx
+
+```
+
+
 ## License
 
 MIT License
