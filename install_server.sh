@@ -68,20 +68,23 @@ mkdir -p $INSTALL_DIR
 echo "  安装目录: $INSTALL_DIR"
 
 # ============================================
-# 第三步：复制项目文件
+# 第三步：复制项目文件（仅在 SCRIPT_DIR != INSTALL_DIR 时执行）
 # ============================================
 echo ""
-echo -e "${YELLOW}[3/5]${NC} 复制项目文件..."
+echo -e "${YELLOW}[3/5]${NC} 检查项目文件..."
 
-# 获取当前脚本所在目录
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-# 复制文件（排除 venv 和数据库）
-rsync -av --exclude='venv' --exclude='*.db' --exclude='__pycache__' \
-    --exclude='*.pyc' --exclude='.git' \
-    "$SCRIPT_DIR/" "$INSTALL_DIR/"
-
-echo -e "  ${GREEN}✓${NC} 文件复制完成"
+if [ "$SCRIPT_DIR" != "$INSTALL_DIR" ]; then
+    echo "  复制文件从 $SCRIPT_DIR 到 $INSTALL_DIR"
+    mkdir -p $INSTALL_DIR
+    rsync -av --exclude='venv' --exclude='*.db' --exclude='__pycache__' \
+        --exclude='*.pyc' --exclude='.git' \
+        "$SCRIPT_DIR/" "$INSTALL_DIR/"
+    echo -e "  ${GREEN}✓${NC} 文件复制完成"
+else
+    echo "  文件已在目标目录，跳过复制"
+fi
 
 # ============================================
 # 第四步：安装 Python 依赖
