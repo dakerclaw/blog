@@ -364,6 +364,81 @@
             accent-color: var(--primary-color);
         }
 
+        /* Editor Toolbar */
+        .editor-toolbar {
+            display: flex;
+            align-items: center;
+            gap: 0.375rem;
+            padding: 0.5rem 0.625rem;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-bottom: none;
+            border-radius: 6px 6px 0 0;
+            flex-wrap: wrap;
+        }
+
+        .editor-toolbar .form-textarea {
+            border-radius: 0 0 6px 6px;
+        }
+
+        .tb-btn {
+            padding: 0.3rem 0.6rem;
+            font-size: 0.8125rem;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            background: white;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all 0.15s;
+            white-space: nowrap;
+        }
+
+        .tb-btn:hover {
+            background: var(--primary-color);
+            color: white;
+            border-color: var(--primary-color);
+        }
+
+        .tb-sep {
+            width: 1px;
+            height: 20px;
+            background: var(--border-color);
+            margin: 0 0.125rem;
+        }
+
+        .editor-wrap {
+            position: relative;
+        }
+
+        .editor-wrap.drag-over .form-textarea {
+            border-color: var(--primary-color);
+            background: rgba(91, 138, 114, 0.05);
+        }
+
+        .upload-overlay {
+            display: none;
+            position: absolute;
+            inset: 0;
+            background: rgba(91, 138, 114, 0.15);
+            border: 2px dashed var(--primary-color);
+            border-radius: 0 0 6px 6px;
+            align-items: center;
+            justify-content: center;
+            font-size: 1rem;
+            color: var(--primary-color);
+            font-weight: 500;
+            pointer-events: none;
+        }
+
+        .editor-wrap.drag-over .upload-overlay {
+            display: flex;
+        }
+
+        .img-uploading {
+            opacity: 0.5;
+            pointer-events: none;
+        }
+
         /* Preview */
         .preview-container {
             background: var(--bg-secondary);
@@ -527,9 +602,29 @@
 
                     <div class="form-group">
                         <label class="form-label">内容 (Markdown) *</label>
-                        <textarea id="postContent" class="form-textarea" 
-                                  placeholder="使用 Markdown 编写文章内容" required></textarea>
-                        <div class="form-hint">支持 Markdown 语法，包括标题、列表、代码块、表格等</div>
+                        <div class="editor-toolbar" id="editorToolbar">
+                            <button type="button" class="tb-btn" onclick="tbWrap('**','**')" title="加粗"><b>B</b></button>
+                            <button type="button" class="tb-btn" onclick="tbWrap('*','*')" title="斜体"><i>I</i></button>
+                            <div class="tb-sep"></div>
+                            <button type="button" class="tb-btn" onclick="tbLine('# ')">H1</button>
+                            <button type="button" class="tb-btn" onclick="tbLine('## ')">H2</button>
+                            <button type="button" class="tb-btn" onclick="tbLine('### ')">H3</button>
+                            <div class="tb-sep"></div>
+                            <button type="button" class="tb-btn" onclick="tbLine('- ')">列表</button>
+                            <button type="button" class="tb-btn" onclick="tbLine('> ')">引用</button>
+                            <button type="button" class="tb-btn" onclick="tbWrap('`','`')">代码</button>
+                            <div class="tb-sep"></div>
+                            <button type="button" class="tb-btn" onclick="tbInsertLink()" title="插入链接">🔗 链接</button>
+                            <button type="button" class="tb-btn" onclick="triggerImageUpload()" title="点击上传图片">🖼 插入图片</button>
+                            <input type="file" id="imageFileInput" accept="image/*" style="display:none" onchange="handleImageFileSelect(this)">
+                        </div>
+                        <div class="editor-wrap" id="editorWrap">
+                            <textarea id="postContent" class="form-textarea" 
+                                      placeholder="使用 Markdown 编写文章内容&#10;&#10;支持直接粘贴截图（Ctrl+V）或拖入图片自动上传" 
+                                      style="border-radius:0 0 6px 6px; border-top:none" required></textarea>
+                            <div class="upload-overlay">📷 松开鼠标上传图片</div>
+                        </div>
+                        <div class="form-hint">支持 Markdown · 可粘贴截图(Ctrl+V)或拖入图片自动上传</div>
                     </div>
 
                     <div class="form-row">
@@ -1025,6 +1120,159 @@
 
         // Load posts on page load
         loadPosts();
+
+        // ============================================================
+        // 编辑器工具栏 & 图片上传
+        // ============================================================
+
+        const contentEl = () => document.getElementById('postContent');
+
+        /** 在光标处插入文本 */
+        function insertAtCursor(text) {
+            const el = contentEl();
+            const start = el.selectionStart;
+            const end = el.selectionEnd;
+            el.value = el.value.substring(0, start) + text + el.value.substring(end);
+            el.selectionStart = el.selectionEnd = start + text.length;
+            el.focus();
+            updatePreview();
+        }
+
+        /** 包裹选中文字 */
+        function tbWrap(before, after) {
+            const el = contentEl();
+            const start = el.selectionStart;
+            const end = el.selectionEnd;
+            const selected = el.value.substring(start, end) || '文字';
+            const newText = before + selected + after;
+            el.value = el.value.substring(0, start) + newText + el.value.substring(end);
+            el.selectionStart = start + before.length;
+            el.selectionEnd = start + before.length + selected.length;
+            el.focus();
+            updatePreview();
+        }
+
+        /** 在行首插入前缀 */
+        function tbLine(prefix) {
+            const el = contentEl();
+            const start = el.selectionStart;
+            const lineStart = el.value.lastIndexOf('\n', start - 1) + 1;
+            el.value = el.value.substring(0, lineStart) + prefix + el.value.substring(lineStart);
+            el.selectionStart = el.selectionEnd = start + prefix.length;
+            el.focus();
+            updatePreview();
+        }
+
+        /** 插入链接 */
+        function tbInsertLink() {
+            const url = prompt('输入链接地址：', 'https://');
+            if (url) {
+                const el = contentEl();
+                const start = el.selectionStart;
+                const end = el.selectionEnd;
+                const text = el.value.substring(start, end) || '链接文字';
+                const md = `[${text}](${url})`;
+                el.value = el.value.substring(0, start) + md + el.value.substring(end);
+                el.selectionStart = el.selectionEnd = start + md.length;
+                el.focus();
+                updatePreview();
+            }
+        }
+
+        /** 触发文件选择 */
+        function triggerImageUpload() {
+            document.getElementById('imageFileInput').click();
+        }
+
+        /** 处理文件选择上传 */
+        function handleImageFileSelect(input) {
+            if (input.files && input.files[0]) {
+                uploadImageFile(input.files[0]);
+                input.value = '';
+            }
+        }
+
+        /** 上传图片并插入 Markdown */
+        async function uploadImageFile(file) {
+            if (!file.type.startsWith('image/')) {
+                showToast('请选择图片文件', 'error');
+                return;
+            }
+
+            const el = contentEl();
+            const placeholder = `![上传中...](uploading)`;
+            const cursorPos = el.selectionStart;
+            insertAtCursor(placeholder);
+            el.classList.add('img-uploading');
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            try {
+                const response = await fetch('/api/admin/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await response.json();
+
+                if (data.success) {
+                    // 替换占位符
+                    const altText = file.name.replace(/\.[^.]+$/, '') || 'image';
+                    el.value = el.value.replace(placeholder, `![${altText}](${data.url})`);
+                    updatePreview();
+                    showToast('图片上传成功');
+                } else {
+                    el.value = el.value.replace(placeholder, '');
+                    showToast(data.message || '上传失败', 'error');
+                }
+            } catch (err) {
+                el.value = el.value.replace(placeholder, '');
+                showToast('上传出错', 'error');
+            } finally {
+                el.classList.remove('img-uploading');
+                updatePreview();
+            }
+        }
+
+        // 粘贴图片 (Ctrl+V)
+        document.addEventListener('paste', function(e) {
+            // 仅在文章编辑器 Modal 打开时处理
+            if (!document.getElementById('postModal').classList.contains('show')) return;
+            const items = e.clipboardData && e.clipboardData.items;
+            if (!items) return;
+            for (let i = 0; i < items.length; i++) {
+                if (items[i].type.startsWith('image/')) {
+                    e.preventDefault();
+                    uploadImageFile(items[i].getAsFile());
+                    break;
+                }
+            }
+        });
+
+        // 拖拽图片
+        const editorWrap = document.getElementById('editorWrap');
+
+        editorWrap.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            editorWrap.classList.add('drag-over');
+        });
+
+        editorWrap.addEventListener('dragleave', (e) => {
+            if (!editorWrap.contains(e.relatedTarget)) {
+                editorWrap.classList.remove('drag-over');
+            }
+        });
+
+        editorWrap.addEventListener('drop', (e) => {
+            e.preventDefault();
+            editorWrap.classList.remove('drag-over');
+            const files = e.dataTransfer.files;
+            for (let i = 0; i < files.length; i++) {
+                if (files[i].type.startsWith('image/')) {
+                    uploadImageFile(files[i]);
+                }
+            }
+        });
 
         // Password Modal Functions
         function openPasswordModal() {
