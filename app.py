@@ -26,6 +26,7 @@ app = Flask(__name__)
 app.secret_key = 'blog-secret-key-2026'
 app.config['DATABASE'] = 'blog.db'
 app.config['UPLOAD_FOLDER'] = 'uploads'
+app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024  # 50MB
 
 # 确保上传目录存在
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
@@ -802,99 +803,147 @@ def import_word():
         return jsonify({'success': False, 'message': '只支持 .docx 格式'}), 400
 
     try:
+        # 获取文件名作为备选标题
+        original_filename = file.filename.rsplit('.', 1)[0] if '.' in file.filename else ''
+        file_title = re.sub(r'[-_]+', ' ', original_filename).strip()
+
         # 读取文件内容
         file_content = BytesIO(file.read())
         doc = Document(file_content)
 
-        markdown_content = []
-        title = ''
+        # 第一步：提取所有内联图片并保存
+        saved_images = []
+        for shape in doc.inline_shapes:
+            try:
+                # 获取图片的rId
+                blip = shape._inline.graphic.graphicData.pic.blipFill.blip
+                rId = blip.get('{http://schemas.openxmlformats.org/officeDocument/2006/relationships}embed')
+                # 通过rId获取图片数据
+                image_part = doc.part.related_parts.get(rId)
+                if image_part:
+                    img_bytes = image_part.blob
+                    # 获取扩展名
+                    img_ext = 'png'
+                    content_type = image_part.content_type if hasattr(image_part, 'content_type') else ''
+                    if 'jpeg' in content_type or 'jpg' in content_type:
+                        img_ext = 'jpg'
+                    elif 'gif' in content_type:
+                        img_ext = 'gif'
+                    elif 'webp' in content_type:
+                        img_ext = 'webp'
 
-        # 处理段落
-        for para in doc.paragraphs:
-            text = para.text.strip()
-            if not text:
-                markdown_content.append('')
-                continue
-
-            # 检测标题样式
-            style_name = para.style.name if para.style else ''
-
-            # 检测是否为列表项
-            if 'List' in style_name or 'Numbering' in style_name:
-                # 无序列表
-                markdown_content.append(f'- {text}')
-                continue
-
-            # 检测有序列表
-            if para._element.find('.//{http://schemas.openxmlformats.org/wordprocessingml/2006/main}numPr') is not None:
-                markdown_content.append(f'- {text}')
-                continue
-
-            # 检测标题样式
-            if 'Heading' in style_name:
-                level = 1
-                if 'Heading 1' in style_name:
-                    level = 1
-                    if not title:
-                        title = text
-                elif 'Heading 2' in style_name:
-                    level = 2
-                elif 'Heading 3' in style_name:
-                    level = 3
-                elif 'Heading 4' in style_name:
-                    level = 4
-                elif 'Heading 5' in style_name:
-                    level = 5
-                elif 'Heading 6' in style_name:
-                    level = 6
-                markdown_content.append(f"{'#' * level} {text}")
-                continue
-
-            # 检测引用
-            if 'Quote' in style_name or 'Block Text' in style_name:
-                markdown_content.append(f'> {text}')
-                continue
-
-            # 处理普通段落（保留样式）
-            inline_md = convert_runs_to_markdown(para)
-            if inline_md:
-                markdown_content.append(inline_md)
-
-        # 处理表格
-        for table in doc.tables:
-            md_table = convert_table_to_markdown(table)
-            if md_table:
-                markdown_content.append(md_table)
-
-        # 处理图片
-        image_map = {}
-        for rel in doc.part.rels.values():
-            if "image" in rel.target_ref:
-                try:
-                    image_data = rel.target_part.blob
-                    img_ext = rel.target_ref.rsplit('.', 1)[-1].lower() if '.' in rel.target_ref else 'png'
-                    if img_ext not in {'png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp'}:
-                        img_ext = 'png'
                     filename = f"{uuid.uuid4().hex}.{img_ext}"
                     image_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
                     with open(image_path, 'wb') as f:
-                        f.write(image_data)
-                    image_map[rel.target_ref] = f"/uploads/{filename}"
-                except Exception:
-                    pass
+                        f.write(img_bytes)
+                    saved_images.append(f"/uploads/{filename}")
+                else:
+                    saved_images.append(None)
+            except Exception:
+                saved_images.append(None)
 
-        # 替换图片引用
+        markdown_content = []
+        title = file_title
+        img_idx = 0
+
+        # 第二步：处理所有body元素
+        body_xml = doc.element.body
+
+        for child in body_xml:
+            tag = child.tag.split('}')[-1] if '}' in child.tag else child.tag
+
+            if tag == 'p':
+                # 段落
+                para = next((p for p in doc.paragraphs if p._element is child), None)
+                if para is None:
+                    continue
+
+                text = para.text.strip()
+                style_name = para.style.name if para.style else ''
+
+                # 检测列表
+                if 'List' in style_name or 'Numbering' in style_name or \
+                   child.find('.//{http://schemas.openxmlformats.org/wordprocessingml/2006/main}numPr') is not None:
+                    markdown_content.append(f'- {text}')
+                    continue
+
+                # 检测标题
+                if 'Heading' in style_name:
+                    level = {'Heading 1': 1, 'Heading 2': 2, 'Heading 3': 3,
+                             'Heading 4': 4, 'Heading 5': 5, 'Heading 6': 6}.get(style_name, 1)
+                    if 'Heading 1' in style_name and (not title or title == file_title):
+                        title = text
+                    markdown_content.append(f"{'#' * level} {text}")
+                    continue
+
+                # 检测引用
+                if 'Quote' in style_name or 'Block Text' in style_name:
+                    markdown_content.append(f'> {text}')
+                    continue
+
+                # 检查段落中的图片
+                drawings = child.findall('.//{http://schemas.openxmlformats.org/wordprocessingml/2006/main}drawing')
+
+                if drawings:
+                    # 有图片的段落
+                    parts = []
+                    for subchild in child:
+                        subtag = subchild.tag.split('}')[-1] if '}' in subchild.tag else subchild.tag
+                        if subtag == 'r':
+                            drawing = subchild.find('.//{http://schemas.openxmlformats.org/wordprocessingml/2006/main}drawing')
+                            if drawing is not None:
+                                # 插入图片
+                                if img_idx < len(saved_images) and saved_images[img_idx]:
+                                    parts.append(f'\n![image]({saved_images[img_idx]})\n')
+                                img_idx += 1
+                            else:
+                                t = subchild.find('{http://schemas.openxmlformats.org/wordprocessingml/2006/main}t')
+                                if t is not None and t.text:
+                                    parts.append(t.text)
+                        elif subtag == 't' and subchild.text:
+                            parts.append(subchild.text)
+
+                    if parts:
+                        markdown_content.append(''.join(parts))
+                    elif not text:
+                        # 纯图片段落
+                        for _ in drawings:
+                            if img_idx < len(saved_images) and saved_images[img_idx]:
+                                markdown_content.append(f'\n![image]({saved_images[img_idx]})\n')
+                            img_idx += 1
+                else:
+                    # 普通段落
+                    if text:
+                        parts = []
+                        for run in para.runs:
+                            txt = run.text or ''
+                            try:
+                                if run._element.find('.//{http://schemas.openxmlformats.org/wordprocessingml/2006/main}strike') is not None:
+                                    txt = f'~~{txt}~~'
+                            except Exception:
+                                pass
+                            if run.underline:
+                                txt = f'<u>{txt}</u>'
+                            if run.bold:
+                                txt = f'**{txt}**'
+                            if run.italic:
+                                txt = f'*{txt}*'
+                            parts.append(txt)
+                        if parts:
+                            markdown_content.append(''.join(parts))
+                    else:
+                        markdown_content.append('')
+
+            elif tag == 'tbl':
+                # 表格
+                table = next((t for t in doc.tables if t._element is child), None)
+                if table:
+                    md_table = convert_table_to_markdown(table)
+                    if md_table:
+                        markdown_content.append(md_table)
+
+        # 合并内容
         final_content = '\n\n'.join(markdown_content)
-        for old_ref, new_url in image_map.items():
-            final_content = final_content.replace(old_ref, new_url)
-
-        # 如果没有找到标题，使用第一行作为标题
-        if not title:
-            lines = [l for l in final_content.split('\n') if l.strip() and not l.startswith('#')]
-            if lines:
-                title = lines[0].strip()
-                if len(title) > 100:
-                    title = title[:100]
 
         return jsonify({
             'success': True,
@@ -904,44 +953,6 @@ def import_word():
 
     except Exception as e:
         return jsonify({'success': False, 'message': f'导入失败: {str(e)}'}), 500
-
-
-def convert_runs_to_markdown(para):
-    """将段落中的Run转换为Markdown"""
-    parts = []
-
-    for run in para.runs:
-        text = run.text
-        if not text:
-            continue
-
-        # 检查样式
-        bold = run.bold
-        italic = run.italic
-        underline = run.underline
-        strike = run.strike
-
-        # 处理删除线
-        if strike:
-            text = f'~~{text}~~'
-
-        # 处理下划线（转为HTML下划线）
-        if underline:
-            text = f'<u>{text}</u>'
-
-        # 处理粗体
-        if bold:
-            text = f'**{text}**'
-
-        # 处理斜体
-        if italic:
-            text = f'*{text}*'
-
-        parts.append(text)
-
-    if parts:
-        return ''.join(parts)
-    return ''
 
 
 def convert_table_to_markdown(table):
