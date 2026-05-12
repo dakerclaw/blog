@@ -621,15 +621,16 @@ a:hover {
 }
 
 .about-stats {
+    width: 100%;
     margin-top: var(--spacing-xl);
     padding-top: var(--spacing-lg);
     border-top: 1px solid var(--border-color);
-    display: flex !important;
-    justify-content: center !important;
-    align-items: center !important;
-    gap: var(--spacing-md) !important;
-    font-size: 0.8125rem !important;
-    color: var(--text-muted) !important;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: var(--spacing-md);
+    font-size: 0.8125rem;
+    color: var(--text-muted);
 }
 
 /* Empty State */
