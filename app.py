@@ -20,7 +20,7 @@ from docx.enum.text import WD_PARAGRAPH_ALIGNMENT
 import re
 
 # 版本号 - 更新此值可强制刷新浏览器缓存
-VERSION = '1.0.5'
+VERSION = '1.0.6'
 
 app = Flask(__name__)
 app.secret_key = 'blog-secret-key-2026'
