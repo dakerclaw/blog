@@ -14,6 +14,19 @@
 
 {% block content %}
 <!-- 内容由 JavaScript 动态渲染 -->
+<!-- 分享微信二维码弹窗 -->
+<div id="wechat-share-modal" class="share-modal" style="display:none;" onclick="if(event.target===this)closeWechatModal()">
+    <div class="share-modal-content">
+        <div class="share-modal-header">
+            <span>分享到微信</span>
+            <button class="share-modal-close" onclick="closeWechatModal()">×</button>
+        </div>
+        <div class="share-modal-body">
+            <img id="wechat-qr-img" src="" alt="微信分享二维码" />
+            <p class="share-modal-tip">打开微信扫一扫</p>
+        </div>
+    </div>
+</div>
 {% endblock %}
 
 {% block scripts %}
@@ -196,6 +209,21 @@ function renderPostPage(post) {
                 <article class="post-content">
                     ${contentHtml}
                 </article>
+                <footer class="post-share">
+                    <span class="post-share-label">分享</span>
+                    <button class="share-btn" onclick="shareToWechat('${post.slug}', '${post.title}')" title="微信">
+                        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M8.5 11.5c-.83 0-1.5.67-1.5 1.5s.67 1.5 1.5 1.5S10 13.83 10 13s-.67-1.5-1.5-1.5zm7 0c-.83 0-1.5.67-1.5 1.5s.67 1.5 1.5 1.5 1.5-.67 1.5-1.5-.67-1.5-1.5-1.5zM12 2C6.48 2 2 6.48 2 12c0 2.17.7 4.18 1.88 5.78L2 22l4.22-1.88C7.82 21.3 9.83 22 12 22c5.52 0 10-4.48 10-10S17.52 2 12 2z"/></svg>
+                    </button>
+                    <button class="share-btn" onclick="shareToWeibo('${post.slug}', '${post.title}')" title="微博">
+                        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M10.09 18c-3.69 0-7.09-1.69-7.09-4.28 0-1.35.87-2.91 2.37-4.29 2.16-1.98 4.72-2.16 5.5-2.16.14 0 .27.01.4.03C9.07 6.14 7.5 4.87 7.5 3.15c0-1.17 1.15-2.18 2.57-2.26 2.84-.15 5.53 1.69 6.15 5.37.33 1.91-.05 3.53-1.07 4.6.68.15 1.96.34 3.07.21-.14-.66-.67-1.66-1.32-2.49 1.08-.39 2.23-1.1 2.23-2.33 0-.84-.48-1.72-1.37-2.33C18.85.65 17.2 0 15.5 0 11.86 0 9.24 3.22 9.24 7.38c0 2.91 1.75 5.39 4.52 6.48-.17.57-.27 1.18-.27 1.8 0 .85.24 1.65.64 2.3-.52-.05-.99-.16-1.42-.32.04-.66.14-1.31.3-1.92-.56.04-1.1.09-1.63.09-.28 0-.56 0-.83-.03-.1.66-.17 1.32-.17 1.98 0 4.48 3.64 8.12 8.12 8.12 3.23 0 5.97-1.9 7.18-4.66.23-.52.35-1.08.35-1.66 0-1.03-.39-2-.99-2.77.27-.03.53-.06.8-.06 1.65 0 3.09 1.02 3.66 2.44.23-.55.35-1.13.35-1.74 0-2.21-1.7-4.01-3.8-4.01-.9 0-1.75.29-2.45.78.33-.1.66-.15 1.01-.15 1.65 0 2.99 1.34 2.99 2.99 0 1.28-.82 2.37-1.99 2.78-.26.09-.53.13-.81.13-.08 0-.16-.01-.24-.01-.29.65-.78 1.22-1.39 1.63.57-.17 1.11-.43 1.6-.77-.13.04-.27.06-.41.06-.21 0-.42-.08-.59-.23-.16-.14-.25-.33-.25-.54s.09-.4.25-.54c.16-.15.37-.23.59-.23.16 0 .31.05.43.15-.11-.01-.22-.02-.33-.02z"/></svg>
+                    </button>
+                    <button class="share-btn" onclick="shareToQQ('${post.slug}', '${post.title}')" title="QQ">
+                        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-1-13h2v6h-2zm0 8h2v2h-2z"/></svg>
+                    </button>
+                    <button class="share-btn" onclick="copyLink('${post.slug}')" title="复制链接">
+                        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h4v-1.9H7c-1.71 0-3.1-1.39-3.1-3.1zM8 13h8v-2H8v2zm9-6h-4v1.9h4c1.71 0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4c2.76 0 5-2.24 5-5s-2.24-5-5-5z"/></svg>
+                    </button>
+                </footer>
             </div>
         </div>
     `;
@@ -354,5 +382,78 @@ document.addEventListener('DOMContentLoaded', () => {
     window.addEventListener('hashchange', router);
     router();
 });
+
+// ============================================
+// 分享功能
+// ============================================
+
+function getShareUrl(slug) {
+    return window.location.origin + '/#/post/' + slug;
+}
+
+function shareToWechat(slug, title) {
+    const url = getShareUrl(slug);
+    const qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=' + encodeURIComponent(url);
+    document.getElementById('wechat-qr-img').src = qrUrl;
+    document.getElementById('wechat-share-modal').style.display = 'flex';
+}
+
+function closeWechatModal() {
+    document.getElementById('wechat-share-modal').style.display = 'none';
+}
+
+function shareToWeibo(slug, title) {
+    const url = getShareUrl(slug);
+    const text = encodeURIComponent(title + ' ' + url);
+    window.open('https://service.weibo.com/share/share.php?url=' + encodeURIComponent(url) + '&title=' + text, '_blank', 'width=600,height=400');
+}
+
+function shareToQQ(slug, title) {
+    const url = getShareUrl(slug);
+    const desc = encodeURIComponent(title);
+    window.open('https://connect.qq.com/widget/shareqq/iframe_index.html?url=' + encodeURIComponent(url) + '&title=' + desc + '&desc=' + desc, '_blank', 'width=600,height=400');
+}
+
+function copyLink(slug) {
+    const url = getShareUrl(slug);
+    if (navigator.clipboard) {
+        navigator.clipboard.writeText(url).then(function() {
+            showToast('链接已复制');
+        }).catch(function() {
+            fallbackCopy(url);
+        });
+    } else {
+        fallbackCopy(url);
+    }
+}
+
+function fallbackCopy(text) {
+    const textarea = document.createElement('textarea');
+    textarea.value = text;
+    textarea.style.position = 'fixed';
+    textarea.style.opacity = '0';
+    document.body.appendChild(textarea);
+    textarea.select();
+    document.execCommand('copy');
+    document.body.removeChild(textarea);
+    showToast('链接已复制');
+}
+
+function showToast(msg) {
+    const existing = document.getElementById('share-toast');
+    if (existing) existing.remove();
+    const toast = document.createElement('div');
+    toast.id = 'share-toast';
+    toast.textContent = msg;
+    toast.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:#333;color:#fff;padding:8px 16px;border-radius:20px;font-size:14px;z-index:9999;opacity:0;transition:opacity 0.3s;pointer-events:none;';
+    document.body.appendChild(toast);
+    requestAnimationFrame(function() {
+        toast.style.opacity = '1';
+    });
+    setTimeout(function() {
+        toast.style.opacity = '0';
+        setTimeout(function() { toast.remove(); }, 300);
+    }, 2000);
+}
 </script>
 {% endblock %}
