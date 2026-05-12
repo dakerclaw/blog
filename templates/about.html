@@ -48,6 +48,15 @@
                             {{ about_content|safe }}
                         </article>
                     </div>
+                    <div class="about-stats">
+                        <span id="busuanzi_container_site_pv">
+                            本站总访问量 <span id="busuanzi_value_site_pv">...</span> 次
+                        </span>
+                        <span class="footer-divider">·</span>
+                        <span id="busuanzi_container_site_uv">
+                            本站访客数 <span id="busuanzi_value_site_uv">...</span> 人
+                        </span>
+                    </div>
                 </div>
             </div>
         </main>
@@ -66,23 +75,13 @@
                         <span class="footer-divider">·</span>
                         <a href="/admin" class="footer-link">管理后台</a>
                     </div>
-                    <div class="footer-stats">
-                        <span id="busuanzi_container_site_pv" style="display:none">
-                            本站总访问量 <span id="busuanzi_value_site_pv"></span> 次
-                        </span>
-                        <span class="footer-divider">·</span>
-                        <span id="busuanzi_container_site_uv" style="display:none">
-                            本站访客数 <span id="busuanzi_value_site_uv"></span> 人
-                        </span>
-                    </div>
                 </div>
             </div>
         </footer>
     </div>
 
+    {% block scripts %}
     <script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
-
-    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <script>
         // 移动端菜单
         let mobileMenuOpen = false;
@@ -103,5 +102,6 @@
             });
         });
     </script>
+    {% endblock %}
 </body>
 </html>
