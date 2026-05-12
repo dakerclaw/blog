@@ -192,16 +192,6 @@ function renderPostPage(post) {
                 </a>
                 <header class="post-header">
                     <h1 class="post-detail-title">${post.title}</h1>
-                    <div class="post-detail-meta">
-                        <span><span>👤</span>${post.author || '觉醒者'}</span>
-                        <span><span>📅</span>${formatDate(post.created_at)}</span>
-                        <span><span>👁</span>${post.views} 阅读</span>
-                    </div>
-                    <div class="post-detail-tags">
-                        ${(post.tags || []).map(tag => 
-                            `<span class="tag" onclick="navigateTo('/tag/${encodeURIComponent(tag)}')">${tag}</span>`
-                        ).join('')}
-                    </div>
                 </header>
                 <article class="post-content">
                     ${contentHtml}
