@@ -115,7 +115,8 @@ function renderHomePage(posts, tags) {
 }
 
 function renderTagsPage(tags) {
-    let tagsHtml = tags.map(tag => `
+    const visibleTags = tags.filter(tag => tag.count > 0);
+    let tagsHtml = visibleTags.map(tag => `
         <div class="tag-card" onclick="navigateTo('/tag/${encodeURIComponent(tag.name)}')">
             <span class="tag-card-name">${tag.name}</span>
             <span class="tag-card-count">${tag.count} 篇</span>
