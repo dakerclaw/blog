@@ -56,7 +56,10 @@
                 <div class="footer-content">
                     <div class="footer-info">
                         <p class="footer-slogan">{{ settings.get('footer_slogan', '探索思维边界，觉醒生命潜能') }}</p>
-                        <p class="footer-copyright">{{ settings.get('footer_copyright', '© 2026 认知觉醒 · 用心原创，欢迎分享') }}</p>
+                        <p class="footer-copyright">
+                            {{ settings.get('footer_copyright', '© 2026 认知觉醒 · 用心原创，欢迎分享') }}
+                            <span id="site-stats" style="margin-left: 12px; font-size: 0.85em; color: var(--text-muted);"></span>
+                        </p>
                     </div>
                     <div class="footer-links">
                         <a href="/" class="footer-link">返回首页</a>
@@ -83,7 +86,6 @@
         </div>
     </div>
 
-    <script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
 
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
@@ -91,5 +93,19 @@
         // 站点配置已由服务器端直接渲染，此处仅保留必要的 SPA 交互逻辑
     </script>
     {% block scripts %}{% endblock %}
+
+    <!-- 自建站点统计（无需第三方） -->
+    <script>
+    (function() {
+        var el = document.getElementById('site-stats');
+        if (!el) return;
+        fetch('/api/stats')
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                el.textContent = '📖 ' + data.total_views + ' 阅读 · ' + data.total_posts + ' 篇文章';
+            })
+            .catch(function() { el.style.display = 'none'; });
+    })();
+    </script>
 </body>
 </html>
