@@ -543,6 +543,11 @@ a:hover {
     color: #fff;
 }
 
+.share-site-icon {
+    font-size: 16px;
+    line-height: 1;
+}
+
 /* 分享弹窗 */
 .share-modal {
     position: fixed;
