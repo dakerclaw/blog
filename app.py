@@ -20,7 +20,7 @@ from docx.enum.text import WD_PARAGRAPH_ALIGNMENT
 import re
 
 # 版本号 - 更新此值可强制刷新浏览器缓存
-VERSION = '1.1.1'
+VERSION = '1.1.3'
 
 app = Flask(__name__)
 app.secret_key = 'blog-secret-key-2026'
@@ -1076,6 +1076,18 @@ def get_all_posts():
     posts = [dict(row) for row in cursor.fetchall()]
     conn.close()
     return jsonify(posts)
+
+# ============================================
+# 静态文件
+# ============================================
+
+@app.route('/static/<path:filename>')
+def serve_static(filename):
+    """提供静态文件服务"""
+    from flask import send_from_directory
+    import os
+    static_dir = os.path.join(os.path.dirname(__file__), 'static')
+    return send_from_directory(static_dir, filename)
 
 # ============================================
 # 页面路由
