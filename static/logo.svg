@@ -1,15 +1,9 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+﻿<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
   <circle cx="100" cy="100" r="95" fill="#faf9f7" stroke="#5b8a72" stroke-width="4"/>
   <circle cx="100" cy="100" r="80" fill="none" stroke="#5b8a72" stroke-width="2"/>
-  
-  <!-- 太极阴 -->
   <path d="M100,20 A80,80 0 0,1 100,180 A40,40 0 0,1 100,100 A40,40 0 0,0 100,20" fill="#5b8a72"/>
   <circle cx="100" cy="140" r="15" fill="#faf9f7"/>
-  
-  <!-- 太极阳 -->
   <path d="M100,180 A80,80 0 0,1 100,20 A40,40 0 0,1 100,100 A40,40 0 0,0 100,180" fill="#c9a959"/>
   <circle cx="100" cy="60" r="15" fill="#5b8a72"/>
-  
-  <!-- 外圈金环 -->
   <circle cx="100" cy="100" r="90" fill="none" stroke="#c9a959" stroke-width="1"/>
 </svg>

@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html>
+<body>
+<img src="logo.svg" id="img" width="200" height="200">
+<canvas id="c" width="200" height="200"></canvas>
+<script>
+var img = document.getElementById('img');
+var canvas = document.getElementById('c');
+var ctx = canvas.getContext('2d');
+img.onload = function() {
+  ctx.drawImage(img, 0, 0);
+  var data = canvas.toDataURL('image/png');
+  console.log(data);
+};
+</script>
+</body>
+</html>
