@@ -11,8 +11,10 @@
     <meta property="og:title" content="{{ settings.get('site_name', '认知觉醒') }}">
     <meta property="og:description" content="{{ settings.get('site_description', '') }}">
     <meta property="og:url" content="{{ request.url }}">
-    <meta property="og:image" content="{{ settings.get('site_logo_image', request.url_root + 'static/logo.svg') }}">
-    <link rel="icon" href="{{ settings.get('site_favicon', '/static/logo.svg') }}" type="image/svg+xml">
+    <meta property="og:image" content="{{ request.url_root.rstrip('/') + '/static/logo.png' }}">
+    <meta property="og:image:width" content="300">
+    <meta property="og:image:height" content="300">
+    <link rel="icon" href="/static/logo.svg" type="image/svg+xml">
     <link rel="stylesheet" href="/css/style.css?v={{ version }}">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css">
 </head>
