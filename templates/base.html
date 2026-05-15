@@ -56,9 +56,8 @@
                 <div class="footer-content">
                     <div class="footer-info">
                         <p class="footer-slogan">{{ settings.get('footer_slogan', '探索思维边界，觉醒生命潜能') }}</p>
-                        <p class="footer-copyright">
-                            {{ settings.get('footer_copyright', '© 2026 认知觉醒 · 用心原创，欢迎分享') }}
-                            <span id="site-stats" style="margin-left: 12px; font-size: 0.85em; color: var(--text-muted);"></span>
+                        <p class="footer-copyright">{{ settings.get('footer_copyright', '© 2026 认知觉醒 · 用心原创，欢迎分享') }}
+                            <span id="site-stats" class="footer-stat"></span>
                         </p>
                     </div>
                     <div class="footer-links">
@@ -102,7 +101,7 @@
         fetch('/api/stats')
             .then(function(r) { return r.json(); })
             .then(function(data) {
-                el.textContent = '📖 ' + data.total_views + ' 阅读 · ' + data.total_posts + ' 篇文章';
+                el.innerHTML = '&nbsp;|&nbsp;📖&nbsp;<span id="busuanzi_value_site_pv">'+data.total_views+'</span>&nbsp;阅读&nbsp;📚&nbsp;<span id="busuanzi_value_site_uv">'+data.total_posts+'</span>&nbsp;篇';
             })
             .catch(function() { el.style.display = 'none'; });
     })();
