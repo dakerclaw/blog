@@ -48,14 +48,10 @@
                             {{ about_content|safe }}
                         </article>
                     </div>
-                    <div class="about-stats" style="width: 100%; display: flex; justify-content: center; align-items: center; gap: 16px;">
-                        <span id="busuanzi_container_site_pv">
-                            本站总访问量 <span id="busuanzi_value_site_pv">...</span> 次
-                        </span>
+                    <div class="about-stats" style="width: 100%; display: flex; justify-content: center; align-items: center; gap: 16px; margin-top: 24px;">
+                        <span>📖 总访问 <span id="total-views">...</span> 次</span>
                         <span class="footer-divider">·</span>
-                        <span id="busuanzi_container_site_uv">
-                            本站访客数 <span id="busuanzi_value_site_uv">...</span> 人
-                        </span>
+                        <span>📚 共 <span id="total-posts">...</span> 篇文章</span>
                     </div>
                 </div>
             </div>
@@ -81,7 +77,6 @@
     </div>
 
     {% block scripts %}
-    <script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
     <script>
         // 移动端菜单
         let mobileMenuOpen = false;
@@ -101,6 +96,22 @@
                 mobileMenuOpen = false;
             });
         });
+
+        // 自建站点统计
+        fetch('/api/stats')
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                var viewsEl = document.getElementById('total-views');
+                var postsEl = document.getElementById('total-posts');
+                if (viewsEl) viewsEl.textContent = data.total_views || 0;
+                if (postsEl) postsEl.textContent = data.total_posts || 0;
+            })
+            .catch(function() {
+                var viewsEl = document.getElementById('total-views');
+                var postsEl = document.getElementById('total-posts');
+                if (viewsEl) viewsEl.textContent = '?';
+                if (postsEl) postsEl.textContent = '?';
+            });
     </script>
     {% endblock %}
 </body>
