@@ -1137,6 +1137,23 @@ def about():
     return render_template('about.html', settings=settings, about_content=about_html, version=VERSION)
 
 # ============================================
+# 统计接口
+# ============================================
+
+@app.route('/api/stats', methods=['GET'])
+def get_stats():
+    """获取站点统计（总访问量、总文章数）"""
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute('SELECT SUM(views) as total_views, COUNT(*) as total_posts FROM posts WHERE status = "published"')
+    row = cursor.fetchone()
+    conn.close()
+    return jsonify({
+        'total_views': row['total_views'] or 0,
+        'total_posts': row['total_posts'] or 0
+    })
+
+# ============================================
 # 静态文件
 # ============================================
 
