@@ -382,7 +382,7 @@ a:hover {
 .post-content {
     font-size: 1.0625rem;
     line-height: 1.85;
-    color: var(--text-primary);
+    color: #111;
 }
 
 .post-content h1,
