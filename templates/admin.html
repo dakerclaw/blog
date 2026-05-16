@@ -1066,8 +1066,6 @@
                 if (response.ok) {
                     showToast('设置已保存');
                     closeSettingsModal();
-                    // 更新页面上的名称
-                    document.getElementById('adminLogoText').textContent = data.site_name || '认知觉醒';
                 } else {
                     showToast('保存失败', 'error');
                 }
