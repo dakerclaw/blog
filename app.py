@@ -1060,6 +1060,22 @@ def delete_post(post_id):
     """删除文章"""
     conn = get_db()
     cursor = conn.cursor()
+
+    # 先获取文章内容，提取图片路径
+    cursor.execute('SELECT content FROM posts WHERE id = ?', (post_id,))
+    row = cursor.fetchone()
+    if row and row['content']:
+        import re
+        # 提取 /uploads/xxx.png 格式的图片路径
+        img_paths = re.findall(r'/uploads/([\w\-\.]+)', row['content'])
+        for img_name in img_paths:
+            img_file = os.path.join(app.config['UPLOAD_FOLDER'], img_name)
+            if os.path.exists(img_file):
+                try:
+                    os.remove(img_file)
+                except Exception:
+                    pass
+
     cursor.execute('DELETE FROM post_tags WHERE post_id = ?', (post_id,))
     cursor.execute('DELETE FROM posts WHERE id = ?', (post_id,))
     conn.commit()
